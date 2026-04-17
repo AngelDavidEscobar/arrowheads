@@ -1,76 +1,79 @@
 # menu.py
 import pygame, sys
-from settings import *
-
-def draw_title(surface, font_big, font_small, tick):
-    surface.fill(C_BG)
-
-    # Marco decorativo medieval
-    border = 20
-    pygame.draw.rect(surface, C_BORDER,
-                     (border, border,
-                      SCREEN_WIDTH - border*2,
-                      SCREEN_HEIGHT - border*2), 4)
-    # líneas interiores
-    pygame.draw.rect(surface, C_BORDER,
-                     (border+8, border+8,
-                      SCREEN_WIDTH - (border+8)*2,
-                      SCREEN_HEIGHT - (border+8)*2), 1)
-
-    # Título
-    title = font_big.render("ARROWHEADS", True, C_UI_TEXT)
-    surface.blit(title, title.get_rect(center=(SCREEN_WIDTH//2, 160)))
-
-    sub = font_small.render("Hunt or be hunted", True, C_BORDER)
-    surface.blit(sub, sub.get_rect(center=(SCREEN_WIDTH//2, 210)))
-
-    # Decoración: flechas simples
-    for i, x in enumerate([130, 380]):
-        color = C_HIGHLIGHT if (tick // 30) % 2 == 0 else C_BORDER
-        pygame.draw.line(surface, color, (x, 157), (x+30, 162), 3)
-        pygame.draw.polygon(surface, color,
-                            [(x+28,157),(x+36,162),(x+28,167)])
-
-    # Botón "Jugar"
-    btn_rect = pygame.Rect(SCREEN_WIDTH//2 - 80, 300, 160, 48)
-    hover    = btn_rect.collidepoint(pygame.mouse.get_pos())
-    pygame.draw.rect(surface, C_HIGHLIGHT if hover else C_BORDER, btn_rect, border_radius=6)
-    pygame.draw.rect(surface, C_BORDER, btn_rect, 2, border_radius=6)
-    label = font_small.render("JUGAR", True, C_BG)
-    surface.blit(label, label.get_rect(center=btn_rect.center))
-
-    # Controles
-    hints = [
-        "WASD / flechas — mover",
-        "Click izquierdo  — disparar",
-        "Sobrevive las oleadas",
-    ]
-    for i, h in enumerate(hints):
-        t = font_small.render(h, True, C_BORDER)
-        surface.blit(t, t.get_rect(center=(SCREEN_WIDTH//2, 390 + i*22)))
-
-    return btn_rect
+import settings as S
 
 
 def run_menu(screen, clock):
-    try:
-        font_big   = pygame.font.Font(None, 52)
-        font_small = pygame.font.Font(None, 28)
-    except:
-        font_big   = pygame.font.SysFont("serif", 48)
-        font_small = pygame.font.SysFont("serif", 26)
-
+    font_big   = pygame.font.Font(None, 62)
+    font_med   = pygame.font.Font(None, 36)
+    font_small = pygame.font.Font(None, 26)
     tick = 0
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                btn = draw_title(screen, font_big, font_small, tick)
+                btn = _draw(screen, font_big, font_med, font_small, tick)
                 if btn.collidepoint(event.pos):
-                    return   # sale del menú → inicia juego
+                    return
 
-        btn = draw_title(screen, font_big, font_small, tick)
+        _draw(screen, font_big, font_med, font_small, tick)
         pygame.display.flip()
-        clock.tick(FPS)
+        clock.tick(S.FPS)
         tick += 1
+
+
+def _draw(surface, font_big, font_med, font_small, tick):
+    surface.fill((210, 180, 140))
+    b = 18
+    W, H = S.SCREEN_WIDTH, S.SCREEN_HEIGHT
+
+    # Marco doble
+    pygame.draw.rect(surface, (90, 60, 30),  (b,   b,   W-b*2,    H-b*2),    4)
+    pygame.draw.rect(surface, (90, 60, 30),  (b+8, b+8, W-b*2-16, H-b*2-16), 1)
+
+    # Título
+    t = font_big.render("ARROWHEADS", True, (50, 30, 10))
+    surface.blit(t, t.get_rect(center=(W//2, 170)))
+    s = font_med.render("Hunt or be hunted", True, (90, 60, 30))
+    surface.blit(s, s.get_rect(center=(W//2, 222)))
+
+    # Flechas animadas
+    for x in (150, 460):
+        col = (200, 140, 50) if (tick // 25) % 2 == 0 else (90, 60, 30)
+        pygame.draw.line(surface, col, (x, 167), (x+28, 172), 3)
+        pygame.draw.polygon(surface, col, [(x+26,167),(x+34,172),(x+26,177)])
+
+    # Botón JUGAR
+    btn = pygame.Rect(W//2 - 90, 305, 180, 52)
+    hover = btn.collidepoint(pygame.mouse.get_pos())
+    pygame.draw.rect(surface, (200,140,50) if hover else (90,60,30),
+                     btn, border_radius=8)
+    pygame.draw.rect(surface, (90, 60, 30), btn, 2, border_radius=8)
+    lbl = font_med.render("JUGAR", True, (210, 180, 140))
+    surface.blit(lbl, lbl.get_rect(center=btn.center))
+
+    # Cuadro power-ups
+    px, py, pw, ph = W//2 - 170, 378, 340, 125
+    pygame.draw.rect(surface, (180,150,110), (px,py,pw,ph), border_radius=6)
+    pygame.draw.rect(surface, (90, 60, 30),  (px,py,pw,ph), 1, border_radius=6)
+
+    pu_info = [
+        ("Power-ups  (10 segundos cada uno)", (50,  30,  10)),
+        ("Azul    P  —  Flechas penetrantes", (70, 130, 180)),
+        ("Morado  T  —  Triple flecha",       (180, 80, 180)),
+        ("Dorado  E  —  Escudo  (inmunidad)", (200,170,  40)),
+    ]
+    for i, (txt, col) in enumerate(pu_info):
+        t = font_small.render(txt, True, col)
+        surface.blit(t, t.get_rect(center=(W//2, py + 20 + i*28)))
+
+    # Controles
+    controls = ["WASD / flechas — mover", "Click — disparar",
+                "ESC — pausa", "Nivel 2 se desbloquea en oleada 6"]
+    for i, h in enumerate(controls):
+        t = font_small.render(h, True, (90, 60, 30))
+        surface.blit(t, t.get_rect(center=(W//2, 526 + i*22)))
+
+    return btn

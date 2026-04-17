@@ -1,20 +1,27 @@
 # main.py
 import pygame
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT, FPS, TITLE
+import settings as S
 from menu import run_menu
 from game import run_game
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption(TITLE)
-    clock  = pygame.time.Clock()
+    pygame.mixer.init()
+    screen = pygame.display.set_mode((S.SCREEN_WIDTH, S.SCREEN_HEIGHT))
+    pygame.display.set_caption(S.TITLE)
+    clock = pygame.time.Clock()
+
+    # Música de fondo (opcional — pon music.ogg en assets/sounds/)
+    try:
+        pygame.mixer.music.load("assets/sounds/music.ogg")
+        pygame.mixer.music.set_volume(0.4)
+        pygame.mixer.music.play(-1)
+    except Exception:
+        pass
 
     while True:
         run_menu(screen, clock)
-        final_score = run_game(screen, clock)
-        # Aquí podrías mostrar una pantalla de game over con el puntaje
-        print(f"Game Over — Puntaje final: {final_score}")
+        run_game(screen, clock)
 
 if __name__ == "__main__":
     main()
