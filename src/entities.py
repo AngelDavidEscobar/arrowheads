@@ -2,7 +2,8 @@
 import pygame, math, random
 import settings as S
 
-# ── Flecha ───────────────────────────────────────────────────────────────────
+
+# ── Flecha ────────────────────────────────────────────────────────────────────
 
 class Arrow(pygame.sprite.Sprite):
     def __init__(self, x, y, dx, dy, pierce=False):
@@ -22,12 +23,12 @@ class Arrow(pygame.sprite.Sprite):
         self.rect.x += self.dx * S.ARROW_SPEED
         self.rect.y += self.dy * S.ARROW_SPEED
         if not pygame.Rect(-20, -20,
-                           S.SCREEN_WIDTH+40,
-                           S.SCREEN_HEIGHT+40).colliderect(self.rect):
+                           S.SCREEN_WIDTH + 40,
+                           S.SCREEN_HEIGHT + 40).colliderect(self.rect):
             self.kill()
 
 
-# ── Power-up pickup ──────────────────────────────────────────────────────────
+# ── Power-up pickup ───────────────────────────────────────────────────────────
 
 class PowerUp(pygame.sprite.Sprite):
     TYPES = ["pierce", "triple", "shield"]
@@ -61,14 +62,16 @@ class PowerUp(pygame.sprite.Sprite):
             self.kill()
 
 
-# ── Jugador ──────────────────────────────────────────────────────────────────
+# ── Jugador ───────────────────────────────────────────────────────────────────
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         surf = pygame.Surface((26, 26), pygame.SRCALPHA)
+        # Cuerpo
         pygame.draw.circle(surf, S.C_PLAYER, (13, 7), 5)
         pygame.draw.rect(surf,   S.C_PLAYER, (9, 12, 8, 11))
+        # Arco
         pygame.draw.arc(surf, S.C_HIGHLIGHT,
                         pygame.Rect(17, 5, 7, 14), 0, math.pi, 2)
         self.image      = surf
@@ -76,10 +79,10 @@ class Player(pygame.sprite.Sprite):
         self.rect       = self.image.get_rect(
             center=(S.SCREEN_WIDTH // 2, S.SCREEN_HEIGHT // 2))
 
-        self.hp        = S.PLAYER_HP
-        self.score     = 0
-        self.cooldown  = 0
-        self.combo     = 1
+        self.hp          = S.PLAYER_HP
+        self.score       = 0
+        self.cooldown    = 0
+        self.combo       = 1
         self.combo_timer = 0
 
         self.pu_pierce = 0
@@ -97,7 +100,7 @@ class Player(pygame.sprite.Sprite):
 
     def take_hit(self):
         if self.shielded:
-            return          # invencible
+            return
         self.hp         -= 1
         self.combo       = 1
         self.combo_timer = 0
@@ -146,18 +149,121 @@ class Player(pygame.sprite.Sprite):
         self.cooldown = S.FIRE_COOLDOWN
 
 
-# ── Enemigo ──────────────────────────────────────────────────────────────────
+# ── Bestia enemiga ────────────────────────────────────────────────────────────
+
+def _draw_beast(variant):
+    """
+    Dibuja una bestia de 28x28 px en una Surface con alpha.
+    variant 0 = lobo  /  variant 1 = bestia cornuda  /  variant 2 = demonio
+    """
+    SIZE   = 28
+    surf   = pygame.Surface((SIZE, SIZE), pygame.SRCALPHA)
+
+    if variant == 0:
+        # ── Lobo ──────────────────────────────────────────────
+        BODY  = (110,  55,  30)   # marrón pelaje
+        DARK  = ( 70,  30,  10)
+        EYE   = (220,  60,  60)   # ojos rojos
+
+        # cuerpo ovalado
+        pygame.draw.ellipse(surf, BODY,  (4, 12, 20, 14))
+        # cabeza
+        pygame.draw.ellipse(surf, BODY,  (7,  4, 14, 13))
+        # hocico
+        pygame.draw.ellipse(surf, DARK,  (9, 11,  8,  6))
+        pygame.draw.ellipse(surf, (200, 100, 60), (10, 12, 6, 4))
+        # orejas puntiagudas
+        pygame.draw.polygon(surf, BODY,  [(8, 5), (5, -1), (11, 4)])
+        pygame.draw.polygon(surf, BODY,  [(18, 5), (23, -1), (17, 4)])
+        # ojos
+        pygame.draw.circle(surf, EYE, (10, 8), 2)
+        pygame.draw.circle(surf, EYE, (17, 8), 2)
+        pygame.draw.circle(surf, (255,200,200), (10, 7), 1)
+        pygame.draw.circle(surf, (255,200,200), (17, 7), 1)
+        # colmillos
+        pygame.draw.polygon(surf, (230, 220, 210),
+                            [(11, 15), (10, 19), (13, 15)])
+        pygame.draw.polygon(surf, (230, 220, 210),
+                            [(16, 15), (17, 19), (14, 15)])
+        # patas
+        for px in (6, 11, 16, 21):
+            pygame.draw.rect(surf, DARK, (px, 24, 3, 5))
+
+    elif variant == 1:
+        # ── Bestia cornuda ────────────────────────────────────
+        BODY  = ( 80,  20,  20)   # rojo oscuro
+        HORN  = (180, 140,  30)   # cuernos dorados
+        EYE   = (255, 200,   0)   # ojos amarillos
+
+        # cuerpo
+        pygame.draw.ellipse(surf, BODY, (3, 11, 22, 16))
+        # cabeza
+        pygame.draw.ellipse(surf, BODY, (6,  3, 16, 14))
+        # cuernos
+        pygame.draw.polygon(surf, HORN, [(8,  4), (4, -3), (10, 3)])
+        pygame.draw.polygon(surf, HORN, [(20, 4), (24, -3), (18, 3)])
+        # ojos brillantes
+        pygame.draw.circle(surf, EYE, (10, 9), 3)
+        pygame.draw.circle(surf, EYE, (18, 9), 3)
+        pygame.draw.circle(surf, (255, 255, 180), (10, 8), 1)
+        pygame.draw.circle(surf, (255, 255, 180), (18, 8), 1)
+        # boca con colmillos
+        pygame.draw.line(surf, (200, 50, 50), (10, 14), (18, 14), 2)
+        pygame.draw.polygon(surf, (230, 220, 210),
+                            [(11, 14), (9,  19), (13, 14)])
+        pygame.draw.polygon(surf, (230, 220, 210),
+                            [(17, 14), (19, 19), (15, 14)])
+        # patas robustas
+        for px in (5, 10, 16, 21):
+            pygame.draw.rect(surf, (60, 10, 10), (px, 25, 4, 5))
+
+    else:
+        # ── Demonio ───────────────────────────────────────────
+        BODY  = ( 40,  10,  60)   # morado oscuro
+        WING  = ( 60,  20,  80)
+        EYE   = (255,  80,   0)   # ojos naranja fuego
+
+        # alas (triángulos detrás del cuerpo)
+        pygame.draw.polygon(surf, WING,
+                            [(14, 10), (0, 2), (5, 18)])
+        pygame.draw.polygon(surf, WING,
+                            [(14, 10), (28, 2), (23, 18)])
+        # cuerpo
+        pygame.draw.ellipse(surf, BODY, (5, 9, 18, 16))
+        # cabeza
+        pygame.draw.ellipse(surf, BODY, (7, 1, 14, 13))
+        # cuernos pequeños
+        pygame.draw.polygon(surf, (180, 60, 220), [(9, 2), (6, -3), (11, 1)])
+        pygame.draw.polygon(surf, (180, 60, 220), [(19, 2), (22, -3), (17, 1)])
+        # ojos de fuego
+        pygame.draw.circle(surf, EYE, (10, 7), 3)
+        pygame.draw.circle(surf, EYE, (18, 7), 3)
+        pygame.draw.circle(surf, (255, 220, 100), (10, 6), 1)
+        pygame.draw.circle(surf, (255, 220, 100), (18, 6), 1)
+        # boca
+        pygame.draw.arc(surf, (255, 80, 0),
+                        pygame.Rect(9, 10, 10, 6), math.pi, 2*math.pi, 2)
+        # garras
+        for px in (6, 11, 16, 21):
+            pygame.draw.rect(surf, (30, 5, 50), (px, 23, 3, 5))
+            pygame.draw.line(surf, (200, 100, 255),
+                             (px+1, 27), (px, 29), 1)
+
+    return surf
+
 
 class Enemy(pygame.sprite.Sprite):
     SPAWN_MARGIN = 30
+    # Qué variante de bestia aparece según la oleada
+    _VARIANT_CYCLE = [0, 0, 1, 1, 2, 0, 1, 2]
 
     def __init__(self, wave, level_cfg):
         super().__init__()
-        self.image = pygame.Surface((22, 22), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, S.C_ENEMY, (11, 8), 6)
-        pygame.draw.rect(self.image,   S.C_ENEMY, (6, 14, 10, 8))
-        self.rect = self.image.get_rect()
+        variant    = self._VARIANT_CYCLE[wave % len(self._VARIANT_CYCLE)]
+        self.image = _draw_beast(variant)
+        self.rect  = self.image.get_rect()
 
+        # Spawn en los bordes
         side = random.randint(0, 3)
         m    = self.SPAWN_MARGIN
         W, H = S.SCREEN_WIDTH, S.SCREEN_HEIGHT
@@ -176,10 +282,10 @@ class Enemy(pygame.sprite.Sprite):
 
     def update(self, target):
         cx, cy = target.rect.center
-        dist   = math.hypot(cx - self.float_x - 11,
-                            cy - self.float_y - 11)
+        ex, ey = self.float_x + 14, self.float_y + 14
+        dist   = math.hypot(cx - ex, cy - ey)
         if dist:
-            self.float_x += (cx - self.float_x - 11) / dist * self.speed
-            self.float_y += (cy - self.float_y - 11) / dist * self.speed
+            self.float_x += (cx - ex) / dist * self.speed
+            self.float_y += (cy - ey) / dist * self.speed
         self.rect.x = int(self.float_x)
         self.rect.y = int(self.float_y)
